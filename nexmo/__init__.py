@@ -1,8 +1,20 @@
-__version__ = '1.5.0'
-
-import requests, os, warnings, hashlib, hmac, jwt, time, uuid, sys
-
+import hashlib
+import hmac
+import jwt
+import os
 from platform import python_version
+import time
+import uuid
+import sys
+import warnings
+
+import requests
+
+from .exceptions import *
+from .sms import SMSProvider
+
+
+__version__ = '1.5.0'
 
 if sys.version_info[0] == 3:
     string_types = (str, bytes)
@@ -10,23 +22,7 @@ else:
     string_types = (unicode, str)
 
 
-class Error(Exception):
-    pass
-
-
-class ClientError(Error):
-    pass
-
-
-class ServerError(Error):
-    pass
-
-
-class AuthenticationError(ClientError):
-    pass
-
-
-class Client():
+class Client(object):
     def __init__(self, **kwargs):
         self.api_key = kwargs.get('key', None) or os.environ.get('NEXMO_API_KEY', None)
 
@@ -54,6 +50,8 @@ class Client():
         self.headers = {'User-Agent': user_agent}
 
         self.auth_params = {}
+
+        self.sms = SMSProvider()
 
     def auth(self, params=None, **kwargs):
         self.auth_params = params or kwargs
@@ -251,24 +249,30 @@ class Client():
 
         return md5.hexdigest()
 
-    def get(self, host, request_uri, params={}):
+    def get(self, host, request_uri, params=None):
         uri = 'https://' + host + request_uri
-
-        params = dict(params, api_key=self.api_key, api_secret=self.api_secret)
+        if params is None:
+            params = {}
+        params.update(api_key=self.api_key, api_secret=self.api_secret)
 
         return self.parse(host, requests.get(uri, params=params, headers=self.headers))
+
+    def __get(self, request_uri, params={}):
+        uri = 'https://' + self.api_host + request_uri
+
+        return self.parse(self.api_host, requests.get(uri, params=params, headers=self.__headers()))
 
     def post(self, host, request_uri, params):
         uri = 'https://' + host + request_uri
 
-        params = dict(params, api_key=self.api_key, api_secret=self.api_secret)
+        params.update(api_key=self.api_key, api_secret=self.api_secret)
 
         return self.parse(host, requests.post(uri, data=params, headers=self.headers))
 
     def put(self, host, request_uri, params):
         uri = 'https://' + host + request_uri
 
-        params = dict(params, api_key=self.api_key, api_secret=self.api_secret)
+        params.update(params, api_key=self.api_key, api_secret=self.api_secret)
 
         return self.parse(host, requests.put(uri, json=params, headers=self.headers))
 
@@ -288,17 +292,12 @@ class Client():
             return response.json()
         elif 400 <= response.status_code < 500:
             message = "{code} response from {host}".format(code=response.status_code, host=host)
-
             raise ClientError(message)
         elif 500 <= response.status_code < 600:
             message = "{code} response from {host}".format(code=response.status_code, host=host)
-
             raise ServerError(message)
 
-    def __get(self, request_uri, params={}):
-        uri = 'https://' + self.api_host + request_uri
 
-        return self.parse(self.api_host, requests.get(uri, params=params, headers=self.__headers()))
 
     def __post(self, request_uri, params):
         uri = 'https://' + self.api_host + request_uri

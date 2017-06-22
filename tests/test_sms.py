@@ -3,12 +3,30 @@ from util import *
 
 
 @responses.activate
-def test_send_message(client, dummy_data):
+def test_deprecated_send_message(client, dummy_data):
     stub(responses.POST, 'https://rest.nexmo.com/sms/json')
 
     params = {'from': 'Python', 'to': '447525856424', 'text': 'Hey!'}
 
-    assert isinstance(client.send_message(params), dict)
+    with pytest.deprecated_call():
+        result = client.send_message(params)
+
+    assert isinstance(result, dict)
+    assert request_user_agent() == dummy_data.user_agent
+    assert 'from=Python' in request_body()
+    assert 'to=447525856424' in request_body()
+    assert 'text=Hey%21' in request_body()
+
+
+@responses.activate
+def test_send_message(client, dummy_data):
+    stub(responses.POST, 'https://rest.nexmo.com/sms/json')
+    result = client.sms.send(
+        from_='Python',
+        to='447700900693',
+        text='Hey!',
+    )
+    assert not isinstance(result, dict)
     assert request_user_agent() == dummy_data.user_agent
     assert 'from=Python' in request_body()
     assert 'to=447525856424' in request_body()
