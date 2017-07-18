@@ -1,4 +1,5 @@
 import requests
+import sys
 
 from .provider import Provider, requires_auth
 
@@ -7,7 +8,8 @@ if sys.version_info[0] == 3:
 else:
     string_types = (unicode, str)
 
-class SMSProvider(object):
+
+class SMSProvider(Provider):
     def __init__(self, auth):
         pass
 
@@ -21,6 +23,7 @@ class SMSProvider(object):
         status_report_req=False,
         callback=None,
         message_class=None,
+        **kwargs
     ):
         """
         Send an SMS message.
@@ -63,10 +66,10 @@ class SMSProvider(object):
         elif 200 <= response.status_code < 300:
             return response.json()
         elif 400 <= response.status_code < 500:
-            message = "{code} response from {host}".format(code=response.status_code, host=host)
+            message = "{code} response from {host}".format(code=response.status_code, host=self.host)
             raise ClientError(message)
         elif 500 <= response.status_code < 600:
-            message = "{code} response from {host}".format(code=response.status_code, host=host)
+            message = "{code} response from {host}".format(code=response.status_code, host=self.host)
             raise ServerError(message)
 
         self.parse(host, )
