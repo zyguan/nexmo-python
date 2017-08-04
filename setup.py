@@ -15,7 +15,12 @@ setup(name='nexmo',
       license='MIT',
       packages=['nexmo'],
       platforms=['any'],
-      install_requires=['requests', 'PyJWT', 'cryptography'],
+      install_requires=[
+          'requests',
+          'PyJWT',
+          'cryptography',
+          'enum34'
+        ],
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Python :: 2',

@@ -7,7 +7,7 @@ class SMSProvider(object):
         from_: str,
         to: str,
         text: str,
-        unicode: bool=False,
+        unicode_: bool=False,
         status_report_req: bool=False,
         callback: str=None,
         message_class:int=None,

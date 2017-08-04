@@ -10,6 +10,7 @@ import warnings
 
 import requests
 
+from .auth import AuthCollection, SecretAuthProvider, SignatureAuthProvider, JWTAuthProvider
 from .exceptions import *
 from .sms import SMSProvider
 
@@ -51,7 +52,18 @@ class Client(object):
 
         self.auth_params = {}
 
-        self.sms = SMSProvider()
+        # Initialize new auth framework:
+        auth_collection = AuthCollection()
+        if self.api_secret:
+            auth_collection.append(SecretAuthProvider(self.api_key, self.api_secret))
+        if self.signature_secret:
+            auth_collection.append(SecretAuthProvider(self.api_key, self.signature_secret))
+        if self.application_id:
+            auth_collection.append(SecretAuthProvider(
+                self.application_id,
+                self.private_key))
+
+        self.sms = SMSProvider(auth_collection)
 
     def auth(self, params=None, **kwargs):
         self.auth_params = params or kwargs
