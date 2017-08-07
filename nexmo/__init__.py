@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import jwt
 import os
-from platform import python_version
 import time
 import uuid
 import sys
@@ -10,7 +9,8 @@ import warnings
 
 import requests
 
-from .auth import AuthCollection, SecretAuthProvider, SignatureAuthProvider, JWTAuthProvider
+from .auth import CredentialsCollection, SecretCredentials, SignatureCredentials, PrivateKeyCredentials
+from .core import Config
 from .exceptions import *
 from .sms import SMSProvider
 
@@ -24,17 +24,12 @@ else:
 
 
 class Client(object):
-    def __init__(self, **kwargs):
-        self.api_key = kwargs.get('key', None) or os.environ.get('NEXMO_API_KEY', None)
-
-        self.api_secret = kwargs.get('secret', None) or os.environ.get('NEXMO_API_SECRET', None)
-
-        self.signature_secret = kwargs.get('signature_secret', None) or os.environ.get('NEXMO_SIGNATURE_SECRET', None)
-
-        self.application_id = kwargs.get('application_id', None)
-
-        self.private_key = kwargs.get('private_key', None)
-
+    def __init__(self, key=None, secret=None, signature_secret=None, application_id=None, private_key=None, **kwargs):
+        self.api_key = key or os.environ.get('NEXMO_API_KEY', None)
+        self.api_secret = secret or os.environ.get('NEXMO_API_SECRET', None)
+        self.signature_secret = signature_secret or os.environ.get('NEXMO_SIGNATURE_SECRET', None)
+        self.application_id = application_id
+        self.private_key = private_key
         if isinstance(self.private_key, string_types) and '\n' not in self.private_key:
             with open(self.private_key, 'rb') as key_file:
                 self.private_key = key_file.read()
@@ -43,32 +38,44 @@ class Client(object):
 
         self.api_host = 'api.nexmo.com'
 
-        user_agent = 'nexmo-python/{0}/{1}'.format(__version__, python_version())
-
-        if 'app_name' in kwargs and 'app_version' in kwargs:
-            user_agent += '/{0}/{1}'.format(kwargs['app_name'], kwargs['app_version'])
-
-        self.headers = {'User-Agent': user_agent}
-
         self.auth_params = {}
 
         # Initialize new auth framework:
-        auth_collection = AuthCollection()
+        auth_collection = CredentialsCollection()
         if self.api_secret:
-            auth_collection.append(SecretAuthProvider(self.api_key, self.api_secret))
+            auth_collection.append(SecretCredentials(self.api_key, self.api_secret))
         if self.signature_secret:
-            auth_collection.append(SecretAuthProvider(self.api_key, self.signature_secret))
+            auth_collection.append(SignatureCredentials(self.api_key, self.signature_secret))
         if self.application_id:
-            auth_collection.append(SecretAuthProvider(
+            auth_collection.append(PrivateKeyCredentials(
                 self.application_id,
                 self.private_key))
 
-        self.sms = SMSProvider(auth_collection)
+        self.config = Config(auth_collection, __version__, kwargs.get('app_name'), kwargs.get('app_version'))
+
+        self.sms = SMSProvider(self.config)
+
+    @property
+    def user_agent(self):
+        return self.config.user_agent
+
+    @user_agent.setter
+    def user_agent(self, value):
+        self.config.user_agent = value
+
+    @property
+    def headers(self):
+        return self.config.headers
+
+    @headers.setter
+    def headers(self, value):
+        self.config.headers = value
 
     def auth(self, params=None, **kwargs):
         self.auth_params = params or kwargs
 
     def send_message(self, params):
+        warnings.warn("Use nexmo.Client.sms.send_message instead.", DeprecationWarning)
         return self.post(self.host, '/sms/json', params)
 
     def get_balance(self):

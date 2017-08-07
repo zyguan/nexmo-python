@@ -1,7 +1,7 @@
 import requests
 import sys
 
-from .auth import requires_auth, SignatureAuthProvider, SecretAuthProvider
+from .auth import requires_auth, SecretBodyAuth, SignatureAuth
 from .exceptions import *
 
 if sys.version_info[0] == 3:
@@ -11,12 +11,11 @@ else:
 
 
 class SMSProvider(object):
-    host = 'rest.nexmo.com'
+    def __init__(self, config):
+        self.config = config
+        self.base = 'https://rest.nexmo.com'
 
-    def __init__(self, credentials):
-        self._credentials = credentials
-
-    @requires_auth([SignatureAuthProvider, SecretAuthProvider])
+    @requires_auth([SignatureAuth, SecretBodyAuth])
     def send_text(
         self,
         from_,
@@ -26,7 +25,7 @@ class SMSProvider(object):
         status_report_req=False,
         callback=None,
         message_class=None,
-        _auth=None,
+        _auth=None, # auth is provided by `requires_auth`
         **kwargs
     ):
         """
@@ -59,17 +58,20 @@ class SMSProvider(object):
         if message_class is not None:
             params['message-class'] = message_class
 
-
         # Generate request: 
-        uri = 'https://' + self.host + '/sms/json'
+        uri = self.base + '/sms/json'
 
-        request = requests.Request("POST", uri, params)
+        request = requests.Request("POST", uri, data=params)
 
-        _auth(request)
+        _auth(request, **kwargs)
 
-        response = requests.post(uri, data=params, headers=self.headers)
+        response = requests.post(uri, data=params, headers=self._headers())
 
         return parse_response(response)
+
+    def _headers(self):
+        # TODO
+        return self.config.headers
 
 
 def parse_response(response, response_type=None):
@@ -78,7 +80,6 @@ def parse_response(response, response_type=None):
         elif response.status_code == 204:
             return None
         elif 200 <= response.status_code < 300:
-            # TODO: This gets replaced by the response parsing system:
             json = response.json()
             if response_type is None:
                 return json

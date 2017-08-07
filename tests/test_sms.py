@@ -21,17 +21,24 @@ def test_deprecated_send_message(client, dummy_data):
 @responses.activate
 def test_send_message(client, dummy_data):
     stub(responses.POST, 'https://rest.nexmo.com/sms/json')
-    result = client.sms.send(
+    result = client.sms.send_text(
         from_='Python',
         to='447700900693',
         text='Hey!',
     )
-    assert not isinstance(result, dict)
+    # assert not isinstance(result, dict)
     assert request_user_agent() == dummy_data.user_agent
     assert 'from=Python' in request_body()
-    assert 'to=447525856424' in request_body()
+    assert 'to=447700900693' in request_body()
     assert 'text=Hey%21' in request_body()
+    assert 'api_key=nexmo-api-key' in request_body()
 
+
+@responses.activate
+def test_thing(client: nexmo.Client):
+    a=12
+    b='abc'
+    client.sms.send_text(from_=a, to=b, text='abc')
 
 @responses.activate
 def test_authentication_error(client):
