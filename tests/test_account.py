@@ -18,10 +18,15 @@ def test_application_info_options(dummy_data):
 
     stub(responses.GET, 'https://rest.nexmo.com/account/get-balance')
 
-    client = nexmo.Client(key=dummy_data.api_key, secret=dummy_data.api_secret, app_name=app_name,
-                          app_version=app_version)
-    user_agent = '/'.join(
-        ['nexmo-python', nexmo.__version__, platform.python_version(), app_name, app_version])
+    client = nexmo.Client(
+        key=dummy_data.api_key,
+        secret=dummy_data.api_secret,
+        app_name=app_name,
+        app_version=app_version)
+    user_agent = '/'.join([
+        'nexmo-python', nexmo.__version__,
+        platform.python_version(), app_name, app_version
+    ])
 
     assert isinstance(client.get_balance(), dict)
     assert request_user_agent() == user_agent
@@ -38,7 +43,8 @@ def test_get_country_pricing(client, dummy_data):
 
 @responses.activate
 def test_get_prefix_pricing(client, dummy_data):
-    stub(responses.GET, 'https://rest.nexmo.com/account/get-prefix-pricing/outbound')
+    stub(responses.GET,
+         'https://rest.nexmo.com/account/get-prefix-pricing/outbound')
 
     assert isinstance(client.get_prefix_pricing(44), dict)
     assert request_user_agent() == dummy_data.user_agent
@@ -47,7 +53,8 @@ def test_get_prefix_pricing(client, dummy_data):
 
 @responses.activate
 def test_get_sms_pricing(client, dummy_data):
-    stub(responses.GET, 'https://rest.nexmo.com/account/get-phone-pricing/outbound/sms')
+    stub(responses.GET,
+         'https://rest.nexmo.com/account/get-phone-pricing/outbound/sms')
 
     assert isinstance(client.get_sms_pricing('447525856424'), dict)
     assert request_user_agent() == dummy_data.user_agent
@@ -56,7 +63,8 @@ def test_get_sms_pricing(client, dummy_data):
 
 @responses.activate
 def test_get_voice_pricing(client, dummy_data):
-    stub(responses.GET, 'https://rest.nexmo.com/account/get-phone-pricing/outbound/voice')
+    stub(responses.GET,
+         'https://rest.nexmo.com/account/get-phone-pricing/outbound/voice')
 
     assert isinstance(client.get_voice_pricing('447525856424'), dict)
     assert request_user_agent() == dummy_data.user_agent
@@ -71,7 +79,8 @@ def test_update_settings(client, dummy_data):
 
     assert isinstance(client.update_settings(params), dict)
     assert request_user_agent() == dummy_data.user_agent
-    assert 'moCallBackUrl=http%3A%2F%2Fexample.com%2Fcallback' in request_body()
+    assert 'moCallBackUrl=http%3A%2F%2Fexample.com%2Fcallback' in request_body(
+    )
 
 
 @responses.activate

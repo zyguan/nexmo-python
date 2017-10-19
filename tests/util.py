@@ -31,7 +31,12 @@ def request_content_type():
 
 
 def stub(method, url):
-    responses.add(method, url, body='{"key":"value"}', status=200, content_type='application/json')
+    responses.add(
+        method,
+        url,
+        body='{"key":"value"}',
+        status=200,
+        content_type='application/json')
 
 
 def assert_re(pattern, string):

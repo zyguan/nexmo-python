@@ -9,28 +9,36 @@ import warnings
 
 import requests
 
-from .auth import CredentialsCollection, SecretCredentials, SignatureCredentials, PrivateKeyCredentials
+from .auth import (CredentialsCollection, SecretCredentials,
+                   SignatureCredentials, PrivateKeyCredentials)
 from .core import Config
-from .exceptions import *
+from .exceptions import ClientError, ServerError, AuthenticationError
 from .sms import SMSProvider
-
 
 __version__ = '1.5.0'
 
 if sys.version_info[0] == 3:
     string_types = (str, bytes)
 else:
-    string_types = (unicode, str)
+    string_types = (unicode, str)  # noqa: F821
 
 
 class Client(object):
-    def __init__(self, key=None, secret=None, signature_secret=None, application_id=None, private_key=None, **kwargs):
+    def __init__(self,
+                 key=None,
+                 secret=None,
+                 signature_secret=None,
+                 application_id=None,
+                 private_key=None,
+                 **kwargs):
         self.api_key = key or os.environ.get('NEXMO_API_KEY', None)
         self.api_secret = secret or os.environ.get('NEXMO_API_SECRET', None)
-        self.signature_secret = signature_secret or os.environ.get('NEXMO_SIGNATURE_SECRET', None)
+        self.signature_secret = signature_secret or os.environ.get(
+            'NEXMO_SIGNATURE_SECRET', None)
         self.application_id = application_id
         self.private_key = private_key
-        if isinstance(self.private_key, string_types) and '\n' not in self.private_key:
+        if isinstance(self.private_key,
+                      string_types) and '\n' not in self.private_key:
             with open(self.private_key, 'rb') as key_file:
                 self.private_key = key_file.read()
 
@@ -43,15 +51,17 @@ class Client(object):
         # Initialize new auth framework:
         auth_collection = CredentialsCollection()
         if self.api_secret:
-            auth_collection.append(SecretCredentials(self.api_key, self.api_secret))
+            auth_collection.append(
+                SecretCredentials(self.api_key, self.api_secret))
         if self.signature_secret:
-            auth_collection.append(SignatureCredentials(self.api_key, self.signature_secret))
+            auth_collection.append(
+                SignatureCredentials(self.api_key, self.signature_secret))
         if self.application_id:
-            auth_collection.append(PrivateKeyCredentials(
-                self.application_id,
-                self.private_key))
+            auth_collection.append(
+                PrivateKeyCredentials(self.application_id, self.private_key))
 
-        self.config = Config(auth_collection, __version__, kwargs.get('app_name'), kwargs.get('app_version'))
+        self.config = Config(auth_collection, __version__,
+                             kwargs.get('app_name'), kwargs.get('app_version'))
 
         self.sms = SMSProvider(self.config)
 
@@ -75,23 +85,28 @@ class Client(object):
         self.auth_params = params or kwargs
 
     def send_message(self, params):
-        warnings.warn("Use nexmo.Client.sms.send_message instead.", DeprecationWarning)
+        warnings.warn("Use nexmo.Client.sms.send_message instead.",
+                      DeprecationWarning)
         return self.post(self.host, '/sms/json', params)
 
     def get_balance(self):
         return self.get(self.host, '/account/get-balance')
 
     def get_country_pricing(self, country_code):
-        return self.get(self.host, '/account/get-pricing/outbound', {'country': country_code})
+        return self.get(self.host, '/account/get-pricing/outbound',
+                        {'country': country_code})
 
     def get_prefix_pricing(self, prefix):
-        return self.get(self.host, '/account/get-prefix-pricing/outbound', {'prefix': prefix})
+        return self.get(self.host, '/account/get-prefix-pricing/outbound',
+                        {'prefix': prefix})
 
     def get_sms_pricing(self, number):
-        return self.get(self.host, '/account/get-phone-pricing/outbound/sms', {'phone': number})
+        return self.get(self.host, '/account/get-phone-pricing/outbound/sms',
+                        {'phone': number})
 
     def get_voice_pricing(self, number):
-        return self.get(self.host, '/account/get-phone-pricing/outbound/voice', {'phone': number})
+        return self.get(self.host, '/account/get-phone-pricing/outbound/voice',
+                        {'phone': number})
 
     def update_settings(self, params=None, **kwargs):
         return self.post(self.host, '/account/settings', params or kwargs)
@@ -103,7 +118,8 @@ class Client(object):
         return self.get(self.host, '/account/numbers', params or kwargs)
 
     def get_available_numbers(self, country_code, params=None, **kwargs):
-        return self.get(self.host, '/number/search', dict(params or kwargs, country=country_code))
+        return self.get(self.host, '/number/search',
+                        dict(params or kwargs, country=country_code))
 
     def buy_number(self, params=None, **kwargs):
         return self.post(self.host, '/number/buy', params or kwargs)
@@ -142,7 +158,8 @@ class Client(object):
         return self.get(self.host, '/sc/us/alert/opt-in/query/json')
 
     def resubscribe_event_alert_number(self, params=None, **kwargs):
-        return self.post(self.host, '/sc/us/alert/opt-in/manage/json', params or kwargs)
+        return self.post(self.host, '/sc/us/alert/opt-in/manage/json',
+                         params or kwargs)
 
     def initiate_call(self, params=None, **kwargs):
         return self.post(self.host, '/call/json', params or kwargs)
@@ -157,39 +174,57 @@ class Client(object):
         return self.post(self.api_host, '/verify/json', params or kwargs)
 
     def send_verification_request(self, params=None, **kwargs):
-        warnings.warn('nexmo.Client#send_verification_request is deprecated (use #start_verification instead)',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'nexmo.Client.send_verification_request is deprecated, use start_verification instead',
+            DeprecationWarning,
+            stacklevel=2)
 
         return self.post(self.api_host, '/verify/json', params or kwargs)
 
     def check_verification(self, request_id, params=None, **kwargs):
-        return self.post(self.api_host, '/verify/check/json', dict(params or kwargs, request_id=request_id))
+        return self.post(self.api_host, '/verify/check/json',
+                         dict(params or kwargs, request_id=request_id))
 
     def check_verification_request(self, params=None, **kwargs):
-        warnings.warn('nexmo.Client#check_verification_request is deprecated (use #check_verification instead)',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'nexmo.Client.check_verification_request is deprecated, use check_verification instead',
+            DeprecationWarning,
+            stacklevel=2)
 
         return self.post(self.api_host, '/verify/check/json', params or kwargs)
 
     def get_verification(self, request_id):
-        return self.get(self.api_host, '/verify/search/json', {'request_id': request_id})
+        return self.get(self.api_host, '/verify/search/json',
+                        {'request_id': request_id})
 
     def get_verification_request(self, request_id):
-        warnings.warn('nexmo.Client#get_verification_request is deprecated (use #get_verification instead)',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'nexmo.Client.get_verification_request is deprecated, use get_verification instead',
+            DeprecationWarning,
+            stacklevel=2)
 
-        return self.get(self.api_host, '/verify/search/json', {'request_id': request_id})
+        return self.get(self.api_host, '/verify/search/json',
+                        {'request_id': request_id})
 
     def cancel_verification(self, request_id):
-        return self.post(self.api_host, '/verify/control/json', {'request_id': request_id, 'cmd': 'cancel'})
+        return self.post(self.api_host, '/verify/control/json',
+                         {'request_id': request_id,
+                          'cmd': 'cancel'})
 
     def trigger_next_verification_event(self, request_id):
-        return self.post(self.api_host, '/verify/control/json', {'request_id': request_id, 'cmd': 'trigger_next_event'})
+        return self.post(self.api_host, '/verify/control/json', {
+            'request_id': request_id,
+            'cmd': 'trigger_next_event'
+        })
 
     def control_verification_request(self, params=None, **kwargs):
-        warnings.warn('nexmo.Client#control_verification_request is deprecated', DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'nexmo.Client#control_verification_request is deprecated',
+            DeprecationWarning,
+            stacklevel=2)
 
-        return self.post(self.api_host, '/verify/control/json', params or kwargs)
+        return self.post(self.api_host, '/verify/control/json', params or
+                         kwargs)
 
     def get_basic_number_insight(self, params=None, **kwargs):
         return self.get(self.api_host, '/ni/basic/json', params or kwargs)
@@ -198,8 +233,11 @@ class Client(object):
         return self.get(self.api_host, '/ni/standard/json', params or kwargs)
 
     def get_number_insight(self, params=None, **kwargs):
-        warnings.warn('nexmo.Client#get_number_insight is deprecated (use #get_standard_number_insight instead)',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'nexmo.Client.get_number_insight is deprecated, '
+            'use get_standard_number_insight instead',
+            DeprecationWarning,
+            stacklevel=2)
 
         return self.get(self.api_host, '/number/lookup/json', params or kwargs)
 
@@ -219,7 +257,8 @@ class Client(object):
         return self.post(self.api_host, '/v1/applications', params or kwargs)
 
     def update_application(self, application_id, params=None, **kwargs):
-        return self.put(self.api_host, '/v1/applications/' + application_id, params or kwargs)
+        return self.put(self.api_host, '/v1/applications/' + application_id,
+                        params or kwargs)
 
     def delete_application(self, application_id):
         return self.delete(self.api_host, '/v1/applications/' + application_id)
@@ -274,33 +313,42 @@ class Client(object):
             params = {}
         params.update(api_key=self.api_key, api_secret=self.api_secret)
 
-        return self.parse(host, requests.get(uri, params=params, headers=self.headers))
+        return self.parse(host,
+                          requests.get(
+                              uri, params=params, headers=self.headers))
 
     def __get(self, request_uri, params={}):
         uri = 'https://' + self.api_host + request_uri
 
-        return self.parse(self.api_host, requests.get(uri, params=params, headers=self.__headers()))
+        return self.parse(self.api_host,
+                          requests.get(
+                              uri, params=params, headers=self.__headers()))
 
     def post(self, host, request_uri, params):
         uri = 'https://' + host + request_uri
 
         params.update(api_key=self.api_key, api_secret=self.api_secret)
 
-        return self.parse(host, requests.post(uri, data=params, headers=self.headers))
+        return self.parse(host,
+                          requests.post(
+                              uri, data=params, headers=self.headers))
 
     def put(self, host, request_uri, params):
         uri = 'https://' + host + request_uri
 
         params.update(params, api_key=self.api_key, api_secret=self.api_secret)
 
-        return self.parse(host, requests.put(uri, json=params, headers=self.headers))
+        return self.parse(host,
+                          requests.put(uri, json=params, headers=self.headers))
 
     def delete(self, host, request_uri):
         uri = 'https://' + host + request_uri
 
         params = dict(api_key=self.api_key, api_secret=self.api_secret)
 
-        return self.parse(host, requests.delete(uri, params=params, headers=self.headers))
+        return self.parse(host,
+                          requests.delete(
+                              uri, params=params, headers=self.headers))
 
     def parse(self, host, response):
         if response.status_code == 401:
@@ -310,28 +358,33 @@ class Client(object):
         elif 200 <= response.status_code < 300:
             return response.json()
         elif 400 <= response.status_code < 500:
-            message = "{code} response from {host}".format(code=response.status_code, host=host)
+            message = "{code} response from {host}".format(
+                code=response.status_code, host=host)
             raise ClientError(message)
         elif 500 <= response.status_code < 600:
-            message = "{code} response from {host}".format(code=response.status_code, host=host)
+            message = "{code} response from {host}".format(
+                code=response.status_code, host=host)
             raise ServerError(message)
-
-
 
     def __post(self, request_uri, params):
         uri = 'https://' + self.api_host + request_uri
 
-        return self.parse(self.api_host, requests.post(uri, json=params, headers=self.__headers()))
+        return self.parse(self.api_host,
+                          requests.post(
+                              uri, json=params, headers=self.__headers()))
 
     def __put(self, request_uri, params):
         uri = 'https://' + self.api_host + request_uri
 
-        return self.parse(self.api_host, requests.put(uri, json=params, headers=self.__headers()))
+        return self.parse(self.api_host,
+                          requests.put(
+                              uri, json=params, headers=self.__headers()))
 
     def __delete(self, request_uri):
         uri = 'https://' + self.api_host + request_uri
 
-        return self.parse(self.api_host, requests.delete(uri, headers=self.__headers()))
+        return self.parse(self.api_host,
+                          requests.delete(uri, headers=self.__headers()))
 
     def __headers(self):
         iat = int(time.time())

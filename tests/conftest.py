@@ -17,7 +17,8 @@ class DummyData(object):
         self.application_id = 'nexmo-application-id'
         self.private_key = read_file('data/private_key.txt')
         self.public_key = read_file('data/public_key.txt')
-        self.user_agent = 'nexmo-python/{0}/{1}'.format(nexmo.__version__, platform.python_version())
+        self.user_agent = 'nexmo-python/{0}/{1}'.format(
+            nexmo.__version__, platform.python_version())
 
 
 @pytest.fixture(scope='session')
@@ -32,5 +33,4 @@ def client(dummy_data):
         key=dummy_data.api_key,
         secret=dummy_data.api_secret,
         application_id=dummy_data.application_id,
-        private_key=dummy_data.private_key,
-    )
+        private_key=dummy_data.private_key, )

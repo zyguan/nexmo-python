@@ -43,7 +43,10 @@ def test_update_application(client, dummy_data):
 
 @responses.activate
 def test_delete_application(client, dummy_data):
-    responses.add(responses.DELETE, 'https://api.nexmo.com/v1/applications/xx-xx-xx-xx', status=204)
+    responses.add(
+        responses.DELETE,
+        'https://api.nexmo.com/v1/applications/xx-xx-xx-xx',
+        status=204)
 
     assert None == client.delete_application('xx-xx-xx-xx')
     assert request_user_agent() == dummy_data.user_agent

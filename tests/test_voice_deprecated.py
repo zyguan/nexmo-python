@@ -29,7 +29,12 @@ def test_initiate_tts_call(client, dummy_data):
 def test_initiate_tts_prompt_call(client, dummy_data):
     stub(responses.POST, 'https://api.nexmo.com/tts-prompt/json')
 
-    params = {'to': '16365553226', 'text': 'Hello', 'max_digits': 4, 'bye_text': 'Goodbye'}
+    params = {
+        'to': '16365553226',
+        'text': 'Hello',
+        'max_digits': 4,
+        'bye_text': 'Goodbye'
+    }
 
     assert isinstance(client.initiate_tts_prompt_call(params), dict)
     assert request_user_agent() == dummy_data.user_agent

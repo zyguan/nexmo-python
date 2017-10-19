@@ -1,17 +1,16 @@
+from collections import abc
 import functools
 import hashlib
+from operator import attrgetter
 import time
-try:
-    from urllib.parse import quote_plus
-except ImportError:
-    from urllib import quote_plus
-from .exceptions import AuthenticationError
 import logging
 import uuid
-
 import jwt
 
+from .exceptions import AuthenticationError
+
 log = logging.getLogger('nexmo.auth')
+
 
 class SecretCredentials(object):
     def __init__(self, api_key, api_secret):
@@ -19,7 +18,7 @@ class SecretCredentials(object):
         self.api_secret = api_secret
 
     @staticmethod
-    def description(self):
+    def description():
         return "api_key and api_secret"
 
 
@@ -29,7 +28,7 @@ class SignatureCredentials(object):
         self.signature_secret = signature_secret
 
     @staticmethod
-    def description(self):
+    def description():
         return "api_key and signature_secret"
 
 
@@ -39,19 +38,24 @@ class PrivateKeyCredentials(object):
         self.private_key = private_key
 
     @staticmethod
-    def description(self):
+    def description():
         return "application_id and private_key"
 
 
 class CredentialsCollection(object):
-    def __init__(self):
-        self._credentials = []
+    def __init__(self, credentials=None):
+        if credentials is None:
+            self._credentials = []
+        elif isinstance(credentials, abc.Sequence):
+            self._credentials = list(credentials)
+        else:
+            self._credentials = [credentials]
 
     def append(self, credentials):
         self._credentials.append(credentials)
 
     def _of_type(self, t):
-        for creds in self._credentials:
+        for creds in self:
             if isinstance(creds, t):
                 return creds
         return None
@@ -65,8 +69,10 @@ class CredentialsCollection(object):
             else:
                 missing_creds.add(auth.credentials_type)
         raise AuthenticationError(
-            "Missing authentication. You must provide one or more of:"
-            + '\n'.join('   ' + m.description() for m in sorted(missing_creds)))
+            "Missing authentication. You must provide one or more of:\n" +
+            '\n'.join(
+                '   ' + m.description()
+                for m in sorted(missing_creds, key=attrgetter("__name__"))))
 
     def __iter__(self):
         return iter(self._credentials)
@@ -77,7 +83,7 @@ class AuthProvider(object):
 
     def __init__(self, credentials):
         self.credentials = credentials
-    
+
     def __call__(self, request):
         raise NotImplementedError("AuthProviders must implement __call__")
 
@@ -89,8 +95,7 @@ class SecretParamsAuth(AuthProvider):
         log.warning("Secret params authentication")
         request.params.update(
             api_key=self.credentials.api_key,
-            api_secret=self.credentials.api_secret,
-        )
+            api_secret=self.credentials.api_secret, )
 
 
 class SecretBodyAuth(AuthProvider):
@@ -99,10 +104,9 @@ class SecretBodyAuth(AuthProvider):
     def __call__(self, request):
         log.warning("Secret body authentication")
         print(request.data)
-        request.data.update(dict(
+        request.data.update(
             api_key=self.credentials.api_key,
-            api_secret=self.credentials.api_secret,
-        ))
+            api_secret=self.credentials.api_secret, )
         print(request.data)
 
 
@@ -111,23 +115,25 @@ class SignatureAuth(AuthProvider):
 
     def _signature(self, params):
         md5 = hashlib.md5()
-        param_string = encode_params(sorted(params))
-        md5.update(param_string)
-        md5.update(self.credentials.signature_secret.encode('utf-8'))
-        return md5.digest()
+        param_string = _encode_params(sorted(params.items()))
+        plaintext = '&' + param_string + self.credentials.signature_secret
+        md5.update(plaintext.encode())
+        return md5.hexdigest()
 
     def _time(self):
-        time.time()
+        return time.time()
+
+    def _modify_params(self, params):
+        params.update(
+            dict(
+                api_key=self.credentials.api_key,
+                timestamp=int(self._time()), ))
+        params.update(
+            sig=self._signature(params), )
 
     def __call__(self, request):
         log.warning("Signature authentication")
-        request.params.extend(dict(
-            api_key=self.credentials.api_key,
-            timestamp=int(self._time()),
-        ))
-        request.params.extend(
-            sig=self._signature(request.params),
-        )
+        self._modify_params(request.data)
 
 
 class JWTAuth(AuthProvider):
@@ -136,13 +142,15 @@ class JWTAuth(AuthProvider):
     def __call__(self, request):
         iat = int(time.time())
 
-        payload = dict(self.auth_params)
+        # TODO: Think about auth_params
+        payload = {}  # dict(self.auth_params)
         payload.setdefault('application_id', self.credentials.application_id)
         payload.setdefault('iat', iat)
         payload.setdefault('exp', iat + 60)
         payload.setdefault('jti', str(uuid.uuid4()))
 
-        token = jwt.encode(payload, self.credentials.private_key, algorithm='RS256')
+        token = jwt.encode(
+            payload, self.credentials.private_key, algorithm='RS256')
 
         request.headers['Authorization'] = b'Bearer ' + token
 
@@ -153,9 +161,11 @@ def requires_auth(supported):
         def requires_auth_wrapper(self, *args, **kwargs):
             auth = self.config.credentials.create_auth(supported)
             return target(self, *args, _auth=auth, **kwargs)
+
         return requires_auth_wrapper
+
     return requires_auth_decorator
 
 
-def encode_params(params):
-    return '&'.join('{q}={v}'.format(k=quote_plus(k), v=quote_plus(v)) for k, v in params)
+def _encode_params(params):
+    return '&'.join('{q}={v}'.format(q=k, v=v) for k, v in params)

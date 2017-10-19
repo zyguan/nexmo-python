@@ -12,8 +12,14 @@ def test_create_call(client, dummy_data):
     stub(responses.POST, 'https://api.nexmo.com/v1/calls')
 
     params = {
-        'to': [{'type': 'phone', 'number': '14843331234'}],
-        'from': {'type': 'phone', 'number': '14843335555'},
+        'to': [{
+            'type': 'phone',
+            'number': '14843331234'
+        }],
+        'from': {
+            'type': 'phone',
+            'number': '14843335555'
+        },
         'answer_url': ['https://example.com/answer']
     }
 
@@ -54,7 +60,9 @@ def test_update_call(client, dummy_data):
 def test_send_audio(client, dummy_data):
     stub(responses.PUT, 'https://api.nexmo.com/v1/calls/xx-xx-xx-xx/stream')
 
-    assert isinstance(client.send_audio('xx-xx-xx-xx', stream_url='http://example.com/audio.mp3'), dict)
+    assert isinstance(
+        client.send_audio(
+            'xx-xx-xx-xx', stream_url='http://example.com/audio.mp3'), dict)
     assert request_user_agent() == dummy_data.user_agent
     assert request_content_type() == 'application/json'
     assert request_body() == b'{"stream_url": "http://example.com/audio.mp3"}'
@@ -122,18 +130,19 @@ def test_authorization_with_private_key_path(dummy_data):
 
     private_key = os.path.join(
         os.path.dirname(__file__),
-        'data/private_key.txt',
-    )
+        'data/private_key.txt', )
 
     client = nexmo.Client(
         key=dummy_data.api_key,
         secret=dummy_data.api_secret,
         application_id=dummy_data.application_id,
-        private_key=private_key,
-    )
+        private_key=private_key, )
     client.get_call('xx-xx-xx-xx')
 
-    token = jwt.decode(request_authorization().split()[1], dummy_data.public_key, algorithm='RS256')
+    token = jwt.decode(
+        request_authorization().split()[1],
+        dummy_data.public_key,
+        algorithm='RS256')
     assert token['application_id'] == dummy_data.application_id
 
 
@@ -144,9 +153,14 @@ def test_authorization_with_private_key_object(client, dummy_data):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
 
-    private_key = serialization.load_pem_private_key(dummy_data.private_key.encode('utf-8'), password=None,
-                                                     backend=default_backend())
+    private_key = serialization.load_pem_private_key(
+        dummy_data.private_key.encode('utf-8'),
+        password=None,
+        backend=default_backend())
     client.get_call('xx-xx-xx-xx')
 
-    token = jwt.decode(request_authorization().split()[1], dummy_data.public_key, algorithm='RS256')
+    token = jwt.decode(
+        request_authorization().split()[1],
+        dummy_data.public_key,
+        algorithm='RS256')
     assert token['application_id'] == dummy_data.application_id

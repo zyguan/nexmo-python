@@ -1,5 +1,6 @@
 __all__ = ["ClientError", "ServerError", "AuthenticationError"]
 
+
 class Error(Exception):
     pass
 

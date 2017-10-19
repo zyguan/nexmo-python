@@ -1,4 +1,5 @@
 import nexmo
+import responses
 from util import *
 
 
@@ -20,13 +21,13 @@ def test_deprecated_send_message(client, dummy_data):
 
 @responses.activate
 def test_send_message(client, dummy_data):
-    stub(responses.POST, 'https://rest.nexmo.com/sms/json')
+    stub("POST", 'https://rest.nexmo.com/sms/json')
     result = client.sms.send_text(
         from_='Python',
         to='447700900693',
-        text='Hey!',
-    )
+        text='Hey!', )
     # assert not isinstance(result, dict)
+    print("Headers:", responses.calls[0].request.headers)
     assert request_user_agent() == dummy_data.user_agent
     assert 'from=Python' in request_body()
     assert 'to=447700900693' in request_body()
@@ -36,13 +37,16 @@ def test_send_message(client, dummy_data):
 
 @responses.activate
 def test_thing(client: nexmo.Client):
-    a=12
-    b='abc'
+    stub(responses.POST, 'https://rest.nexmo.com/sms/json')
+    a = 12
+    b = 'abc'
     client.sms.send_text(from_=a, to=b, text='abc')
+
 
 @responses.activate
 def test_authentication_error(client):
-    responses.add(responses.POST, 'https://rest.nexmo.com/sms/json', status=401)
+    responses.add(
+        responses.POST, 'https://rest.nexmo.com/sms/json', status=401)
 
     with pytest.raises(nexmo.AuthenticationError):
         client.send_message({})
@@ -50,7 +54,8 @@ def test_authentication_error(client):
 
 @responses.activate
 def test_client_error(client):
-    responses.add(responses.POST, 'https://rest.nexmo.com/sms/json', status=400)
+    responses.add(
+        responses.POST, 'https://rest.nexmo.com/sms/json', status=400)
 
     with pytest.raises(nexmo.ClientError) as excinfo:
         client.send_message({})
@@ -59,7 +64,8 @@ def test_client_error(client):
 
 @responses.activate
 def test_server_error(client):
-    responses.add(responses.POST, 'https://rest.nexmo.com/sms/json', status=500)
+    responses.add(
+        responses.POST, 'https://rest.nexmo.com/sms/json', status=500)
 
     with pytest.raises(nexmo.ServerError) as excinfo:
         client.send_message({})

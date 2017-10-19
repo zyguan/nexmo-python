@@ -228,7 +228,7 @@ client.get_number_insight(number='447700900000')
 
 Docs: [https://docs.nexmo.com/number-insight/standard](https://docs.nexmo.com/number-insight/basic?utm_source=DEV_REL&utm_medium=github&utm_campaign=python-client-library?utm_source=DEV_REL&utm_medium=github&utm_campaign=python-client-library)
 
-<!-- when the switchover to new Number Insight is done, then we'll add Advance Insight... -->   
+<!-- when the switchover to new Number Insight is done, then we'll add Advance Insight... -->  
 
 ## Application API
 
@@ -325,7 +325,7 @@ API Coverage
     * [X] Check
     * [X] Search
     * [X] Control
-* Messaging 
+* Messaging
     * [X] Send
     * [ ] Delivery Receipt
     * [ ] Inbound Messages
