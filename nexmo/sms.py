@@ -7,6 +7,47 @@ import requests
 from .auth import requires_auth, SecretBodyAuth, SignatureAuth
 from .exceptions import AuthenticationError, ClientError, ServerError
 
+import attr
+from marshmallow import Schema, fields, post_load
+
+
+class MessagePartSchema(Schema):
+    to = fields.Str()
+    message_id = fields.Str(load_from="message-id")
+    status = fields.Int()
+    remaining_balance = fields.Decimal(load_from="remaining-balance")
+    message_price = fields.Decimal(load_from="message-price")
+    network = fields.Str()
+
+    @post_load
+    def make_object(self, data):
+        return MessagePart(**data)
+
+
+class SendMessageResponseSchema(Schema):
+    message_count = fields.Str()
+    messages = fields.List(MessagePartSchema)
+
+    @post_load
+    def make_object(self, data):
+        return SendMessageResponse(**data)
+
+
+@attr.s
+class SendMessageResponse:
+    message_count = attr.ib()
+    messages = attr.ib()
+
+
+@attr.s
+class MessagePart:
+    to = attr.ib()
+    message_id = attr.ib()
+    status = attr.ib()
+    remaining_balance = attr.ib()
+    message_price = attr.ib()
+    network = attr.ib()
+
 
 class SMSProvider(object):
     def __init__(self, config):

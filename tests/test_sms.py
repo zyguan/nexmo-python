@@ -2,6 +2,8 @@ import nexmo
 import responses
 from util import *
 
+from nexmo import sms
+
 
 @responses.activate
 def test_deprecated_send_message(client, dummy_data):
@@ -70,3 +72,22 @@ def test_server_error(client):
     with pytest.raises(nexmo.ServerError) as excinfo:
         client.send_message({})
     excinfo.match(r'500 response from rest.nexmo.com')
+
+
+def test_deserialise_send_message_response():
+    ser = """
+    {
+    "message-count": "1",
+    "messages": [
+        {
+        "to": "447700900526",
+        "message-id": "0B0000008F7CEFF7",
+        "status": "0",
+        "remaining-balance": "37.36096950",
+        "message-price": "0.03330000",
+        "network": "23410"
+        }
+    ]
+    } """
+    loaded = sms.SendMessageResponseSchema().load(ser)
+    assert loaded.message_count == 1
