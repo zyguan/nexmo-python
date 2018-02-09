@@ -16,11 +16,11 @@ setup(
     packages=['nexmo'],
     platforms=['any'],
     install_requires=[
-        'requests',
-        'PyJWT',
-        'cryptography',
+        'requests~=2.18.4',
+        'PyJWT~=1.5.3',
+        'cryptography~=2.1.4',
         'attrs~=17.2.0',
-        'marshmallow~=3.0.0b3',
+        'marshmallow~=3.0.0b7',
     ],
     classifiers=[
         'Programming Language :: Python',
