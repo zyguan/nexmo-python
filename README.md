@@ -19,6 +19,8 @@ The `ng` branch (stands  for Next Generation) is an experimental branch to play 
 * **Python 3 Only**: We're not going to compromise on the library by supporting Python 2. At the moment we're targeting Python 3.5+
 * **Type Hints**: Type hints can really help users in using the library correctly, so the public interface will be heavily annotated with type hints.
 * **A Rich Client Library**: Some of Nexmo's older APIs have slightly crufty data structures. This library will convert between those values and the expected native Python types. Abstractions will be provided for API data structures such as webhook payloads and NCCO structures.
+* **Async First**: For a library to work as both sync and async with asyncio, it needs to be async-first, with a synchronous wrapper.
+* **Optional Integration With Frameworks**: Some light integration with frameworks such as Django, Flask & Sanic can go a long way. We'll pave the cowpaths to make everyone's lives easier.
 
 Installation
 ------------
