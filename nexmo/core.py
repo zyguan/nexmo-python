@@ -3,6 +3,7 @@ from platform import python_version
 from urllib.parse import urljoin
 
 
+
 class IllegalStateError(Exception):
     pass
 
@@ -29,6 +30,7 @@ class Sling:
         self._headers = headers or {}
         self._params = params or {}
         self._raw_url = url or None
+        async with aiohttp.ClientSession() as session:
 
     def new(self):
         return self.__class__(
@@ -68,3 +70,11 @@ class Sling:
 
     def delete(self, path=None):
         return self.method("DELETE").path(path)
+
+    async def do_async(self):
+        return await self.session.request(
+            method=self._method,
+            url=self._url,
+            params=self._params if self._method not in {'POST', 'PUT'} else None,
+            body=self._params if self._method in {'POST', 'PUT'} else None,
+            

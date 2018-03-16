@@ -26,7 +26,7 @@ class MessagePartSchema(Schema):
 
 class SendMessageResponseSchema(Schema):
     message_count = fields.Str()
-    messages = fields.List(MessagePartSchema)
+    messages = MessagePartSchema(many=True)
 
     @post_load
     def make_object(self, data):
@@ -54,7 +54,7 @@ class SMSProvider(object):
         self.config = config
         self.base = 'https://rest.nexmo.com'
         self.session = requests.Session()
-        self.session.headers.update({'user-agent': ''})
+        self.session.headers.update({'user-agent': 'abcde'})
 
     @requires_auth([SignatureAuth, SecretBodyAuth])
     def send_text(
@@ -104,7 +104,7 @@ class SMSProvider(object):
         request = requests.Request("POST", uri, data=params)
         _auth(request, **kwargs)
 
-        response = self.session.send(request.prepare())
+        response = self.session.send(self.session.prepare_request(request))
         return parse_response(response)
 
 
