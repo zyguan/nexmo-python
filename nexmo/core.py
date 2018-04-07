@@ -1,7 +1,13 @@
+#!python3
+
 from platform import python_version
-
 from urllib.parse import urljoin
+from textwrap import dedent
 
+__all__ = [
+    "IllegalStateError",
+    "Sling",
+]
 
 
 class IllegalStateError(Exception):
@@ -25,26 +31,38 @@ class Config:
 
 
 class Sling:
-    def __init__(self, *, url=None, method=None, headers=None, params=None):
+    def __init__(self, *,
+        auth=None, requester=None, credentials=None, url=None, method=None, headers=None, params=None
+    ):
+        self._auth = auth
+        self._credentials = credentials
+        self._requester = requester
+
         self._method = method or "GET"
         self._headers = headers or {}
         self._params = params or {}
-        self._raw_url = url or None
-        async with aiohttp.ClientSession() as session:
+        self._url = url or None
 
     def new(self):
         return self.__class__(
-            url=self._raw_url,
+            auth=self._auth,
+            credentials=self._credentials,
+            requester=self._requester,
+            url=self._url,
             method=self._method,
             headers=dict(self._headers),
             params=dict(self._params))
 
     def base(self, value):
-        self._raw_url = value
+        self._url = value
         return self
 
     def path(self, path):
-        self._raw_url = urljoin(self._raw_url, path)
+        self._url = urljoin(self._url, path)
+        return self
+
+    def auth(self, supported):
+        self._auth = self._credentials.create_auth(supported)
         return self
 
     def params(self, params):
@@ -71,10 +89,81 @@ class Sling:
     def delete(self, path=None):
         return self.method("DELETE").path(path)
 
+    def __repr__(self):
+        return dedent('''
+        <{self.__class__.__name__}(
+            auth={self._auth!r},
+            credentials={self._credentials!r},
+            requester={self._requester!r},
+            url={self._url!r},
+            method={self._method!r},
+            headers={self._headers!r},
+            params={self._params!r},
+        )>'''.format(self=self)).strip()
+
     async def do_async(self):
-        return await self.session.request(
-            method=self._method,
-            url=self._url,
-            params=self._params if self._method not in {'POST', 'PUT'} else None,
-            body=self._params if self._method in {'POST', 'PUT'} else None,
-            
+        sling = self
+        if self._auth is not None:
+            sling = self.new()
+
+        return await self._requester.request(self)
+
+    def do(self):
+        return self._requester.request(self)
+
+
+import aiohttp
+
+class AioHttpRequester():
+    def __init__(self):
+        self._session = aiohttp.ClientSession()
+
+    def close(self):
+        if self._session is not None:
+            self._session.close()
+            self._session = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self.close()
+
+    async def request(self, sling):
+        return await self._session.request(
+            method=sling._method,
+            url=sling._url,
+            params=sling._params if sling._method not in {'POST', 'PUT'} else None,
+            data=sling._params if sling._method in {'POST', 'PUT'} else None,
+        )
+
+    def __repr__(self):
+        return '<{self.__class__.__name__} {id:X}>'.format(self=self, id=id(self))
+
+import requests
+
+class RequestsRequester():
+    def __init__(self):
+        self._session = requests.Session()
+
+    def close(self):
+        if self._session is not None:
+            self._session.close()
+            self._session = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self.close()
+
+    async def request(self, sling):
+        return await self._session.request(
+            method=sling._method,
+            url=sling._url,
+            params=sling._params if sling._method not in {'POST', 'PUT'} else None,
+            data=sling._params if sling._method in {'POST', 'PUT'} else None,
+        )
+
+    def __repr__(self):
+        return '<{self.__class__.__name__} {id:X}>'.format(self=self, id=id(self))

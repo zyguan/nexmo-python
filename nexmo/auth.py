@@ -84,7 +84,7 @@ class AuthProvider(object):
     def __init__(self, credentials):
         self.credentials = credentials
 
-    def __call__(self, request):
+    def __call__(self, sling):
         raise NotImplementedError("AuthProviders must implement __call__")
 
 
@@ -101,13 +101,11 @@ class SecretParamsAuth(AuthProvider):
 class SecretBodyAuth(AuthProvider):
     credentials_type = SecretCredentials
 
-    def __call__(self, request):
+    def __call__(self, sling):
         log.warning("Secret body authentication")
-        print(request.data)
-        request.data.update(
+        sling.params(dict(
             api_key=self.credentials.api_key,
-            api_secret=self.credentials.api_secret, )
-        print(request.data)
+            api_secret=self.credentials.api_secret, ))
 
 
 class SignatureAuth(AuthProvider):
@@ -123,13 +121,13 @@ class SignatureAuth(AuthProvider):
     def _time(self):
         return time.time()
 
-    def _modify_params(self, params):
-        params.update(
+    def _modify_params(self, sling):
+        sling.params(
             dict(
                 api_key=self.credentials.api_key,
                 timestamp=int(self._time()), ))
-        params.update(
-            sig=self._signature(params), )
+        sling.params(dict(
+            sig=self._signature(sling._params), ))
 
     def __call__(self, request):
         log.warning("Signature authentication")
@@ -139,7 +137,7 @@ class SignatureAuth(AuthProvider):
 class JWTAuth(AuthProvider):
     credentials_type = PrivateKeyCredentials
 
-    def __call__(self, request):
+    def __call__(self, sling):
         iat = int(time.time())
 
         # TODO: Think about auth_params
@@ -152,9 +150,10 @@ class JWTAuth(AuthProvider):
         token = jwt.encode(
             payload, self.credentials.private_key, algorithm='RS256')
 
-        request.headers['Authorization'] = b'Bearer ' + token
+        sling.headers({'Authorization', b'Bearer ' + token})
 
 
+# FIXME: Probably not going to use this.
 def requires_auth(supported):
     def requires_auth_decorator(target):
         @functools.wraps(target)

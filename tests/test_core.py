@@ -11,36 +11,36 @@ def test_empty_sling():
 
 def test_base():
     s = Sling().base("https://rest.nexmo.com/")
-    assert s._raw_url == "https://rest.nexmo.com/"
+    assert s._url == "https://rest.nexmo.com/"
 
     s = Sling().base("https://rest.nexmo.com/path")
-    assert s._raw_url == "https://rest.nexmo.com/path"
+    assert s._url == "https://rest.nexmo.com/path"
 
 
 def test_path():
     s = Sling().base("https://rest.nexmo.com/").path("first")
-    assert s._raw_url == "https://rest.nexmo.com/first", "Append to root should set the path."
+    assert s._url == "https://rest.nexmo.com/first", "Append to root should set the path."
 
     s = Sling().base("https://rest.nexmo.com/first").path("replace/this")
-    assert s._raw_url == "https://rest.nexmo.com/replace/this", "Setting a path on a url which does not end with / should replace the last element."
+    assert s._url == "https://rest.nexmo.com/replace/this", "Setting a path on a url which does not end with / should replace the last element."
 
     s = Sling().base("https://rest.nexmo.com/replace/this").path("me")
-    assert s._raw_url == "https://rest.nexmo.com/replace/me", "Setting a path on a url which does not end with / should replace ONLY the last element."
+    assert s._url == "https://rest.nexmo.com/replace/me", "Setting a path on a url which does not end with / should replace ONLY the last element."
 
     s = Sling().base("https://rest.nexmo.com/replace/me").path("/only")
-    assert s._raw_url == "https://rest.nexmo.com/only", "Setting a path which starts with / should replace the whole path."
+    assert s._url == "https://rest.nexmo.com/only", "Setting a path which starts with / should replace the whole path."
 
 
 def test_path_on_empty_base():
     s = Sling().path("first")
-    assert s._raw_url == "first"
+    assert s._url == "first"
 
     s = Sling().path("first").base("https://rest.nexmo.com/")
-    assert s._raw_url == "https://rest.nexmo.com/"
+    assert s._url == "https://rest.nexmo.com/"
 
     s = Sling().base("https://rest.nexmo.com/sms").base(
         "https://api.nexmo.com")
-    assert s._raw_url == "https://api.nexmo.com"
+    assert s._url == "https://api.nexmo.com"
 
 
 def test_new():
@@ -56,8 +56,8 @@ def test_new():
     }).method('PUT')
 
     assert a is not b
-    assert a._raw_url == "https://api.nexmo.com/sms/"
-    assert b._raw_url == "https://api.nexmo.com/sms/send"
+    assert a._url == "https://api.nexmo.com/sms/"
+    assert b._url == "https://api.nexmo.com/sms/send"
 
     assert a._headers == {'a': 'b'}
     assert b._headers == {

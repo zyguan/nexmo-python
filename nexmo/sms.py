@@ -2,8 +2,6 @@
 nexmo.sms - Nexmo SMS API interface.
 '''
 
-import requests
-
 from .auth import requires_auth, SecretBodyAuth, SignatureAuth
 from .exceptions import AuthenticationError, ClientError, ServerError
 
@@ -49,15 +47,11 @@ class MessagePart:
     network = attr.ib()
 
 
-class SMSProvider(object):
-    def __init__(self, config):
-        self.config = config
-        self.base = 'https://rest.nexmo.com'
-        self.session = requests.Session()
-        self.session.headers.update({'user-agent': 'abcde'})
+class BaseSMSProvider:
+    def __init__(self, sling):
+        self._sling = sling.new().path('sms')
 
-    @requires_auth([SignatureAuth, SecretBodyAuth])
-    def send_text(
+    def _send_text_sling(
             self,
             *,
             from_,
@@ -67,8 +61,37 @@ class SMSProvider(object):
             status_report_req=False,
             callback=None,
             message_class=None,
-            _auth=None,  # auth is provided by `requires_auth`
-            **kwargs):
+    ):
+        sling = self._sling.new() \
+            .post('json') \
+            .auth([SignatureAuth, SecretBodyAuth]) \
+            .params({
+                'from': from_,
+                'to': to,
+                'text': text,
+                'type': 'text' if not unicode_ else 'unicode',
+            })
+        if status_report_req or callback is not None:
+            sling.params({'status-report-req': 1})
+        if callback is not None:
+            sling.params({'callback': callback})
+        if message_class is not None:
+            sling.params({'message-class': message_class})
+        return sling
+
+
+class AsyncSMSProvider(BaseSMSProvider):
+    async def send_text(
+            self,
+            *,
+            from_,
+            to,
+            text,
+            unicode_=False,
+            status_report_req=False,
+            callback=None,
+            message_class=None,
+    ):
         """
         Send an SMS text or unicode message.
 
@@ -82,30 +105,56 @@ class SMSProvider(object):
         :return:
         """
 
-        # Construct params dict:
-        params = {
-            'from': from_,
-            'to': to,
-            'text': text,
-            'type': 'text' if not unicode_ else 'unicode',
-        }
+        sling = self._send_text_sling(
+            from_=from_,
+            to=to,
+            text=text,
+            unicode_=unicode_,
+            status_report_req=status_report_req,
+            callback=callback,
+            message_class=message_class,
+        )
+        return parse_response(await sling.do_async())
 
-        if status_report_req or callback is not None:
-            params['status-report-req'] = 1
 
-        if callback is not None:
-            params['callback'] = callback
+class SMSProvider(BaseSMSProvider):
+    def __init__(self, sling):
+        self._sling = sling.new().path('sms')
 
-        if message_class is not None:
-            params['message-class'] = message_class
+    def send_text(
+            self,
+            *,
+            from_,
+            to,
+            text,
+            unicode_=False,
+            status_report_req=False,
+            callback=None,
+            message_class=None,
+    ):
+        """
+        Send an SMS text or unicode message.
 
-        # Generate request:
-        uri = self.base + '/sms/json'
-        request = requests.Request("POST", uri, data=params)
-        _auth(request, **kwargs)
+        :param str from_:
+        :param str to:
+        :param str text:
+        :param bool unicode_:
+        :param bool status_report_req:
+        :param str callback:
+        :param int message_class:
+        :return:
+        """
 
-        response = self.session.send(self.session.prepare_request(request))
-        return parse_response(response)
+        sling = self._send_text_sling(
+            from_=from_,
+            to=to,
+            text=text,
+            unicode_=unicode_,
+            status_report_req=status_report_req,
+            callback=callback,
+            message_class=message_class,
+        )
+        return parse_response(sling.do())
 
 
 def parse_response(response, response_type=None):

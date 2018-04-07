@@ -7,11 +7,10 @@ import uuid
 import sys
 import warnings
 
-import requests
-
+from platform import python_version
 from .auth import (CredentialsCollection, SecretCredentials,
                    SignatureCredentials, PrivateKeyCredentials)
-from .core import Config
+from .core import Sling
 from .exceptions import ClientError, ServerError, AuthenticationError
 from .sms import SMSProvider
 
@@ -21,13 +20,17 @@ string_types = (str, bytes)
 
 
 class Client(object):
-    def __init__(self,
-                 key=None,
-                 secret=None,
-                 signature_secret=None,
-                 application_id=None,
-                 private_key=None,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        key=None,
+        secret=None,
+        signature_secret=None,
+        application_id=None,
+        private_key=None,
+        app_name=None,
+        app_version=None,
+    ):
         self.api_key = key or os.environ.get('NEXMO_API_KEY', None)
         self.api_secret = secret or os.environ.get('NEXMO_API_SECRET', None)
         self.signature_secret = signature_secret or os.environ.get(
@@ -39,13 +42,7 @@ class Client(object):
             with open(self.private_key, 'rb') as key_file:
                 self.private_key = key_file.read()
 
-        self.host = 'rest.nexmo.com'
-
-        self.api_host = 'api.nexmo.com'
-
-        self.auth_params = {}
-
-        # Initialize new auth framework:
+        # Initialize auth collection:
         auth_collection = CredentialsCollection()
         if self.api_secret:
             auth_collection.append(
@@ -57,26 +54,22 @@ class Client(object):
             auth_collection.append(
                 PrivateKeyCredentials(self.application_id, self.private_key))
 
-        self.config = Config(auth_collection, __version__,
-                             kwargs.get('app_name'), kwargs.get('app_version'))
+        user_agent = 'nexmo-python/{0}/{1}'.format(__version__,
+                                                   python_version())
+        if app_name is not None and app_version is not None:
+            user_agent += '/{0}/{1}'.format(app_name, app_version)
 
-        self.sms = SMSProvider(self.config)
+        base_sling = Sling(
+            auth=auth_collection,
+            headers={
+                '': '',
+            },
+        )
 
-    @property
-    def user_agent(self):
-        return self.config.user_agent
+        rest_sling = base_sling.new().base('https://rest.nexmo.com')
+        api_sling =  base_sling.new().base('https://api.nexmo.com')
 
-    @user_agent.setter
-    def user_agent(self, value):
-        self.config.user_agent = value
-
-    @property
-    def headers(self):
-        return self.config.headers
-
-    @headers.setter
-    def headers(self, value):
-        self.config.headers = value
+        self.sms = SMSProvider(rest_sling)
 
     def check_signature(self, params):
         params = dict(params)
