@@ -1,13 +1,21 @@
 #!python3
 
+import logging
 from platform import python_version
 from urllib.parse import urljoin
 from textwrap import dedent
+
+import aiohttp
+import requests
+
+from .auth import CredentialsCollection
 
 __all__ = [
     "IllegalStateError",
     "Sling",
 ]
+
+LOG = logging.getLogger('nexmo.core')
 
 
 class IllegalStateError(Exception):
@@ -31,11 +39,10 @@ class Config:
 
 
 class Sling:
-    def __init__(self, *,
-        auth=None, requester=None, credentials=None, url=None, method=None, headers=None, params=None
-    ):
+    def __init__(self, *, auth=None, credentials=None, headers=None, method=None, params=None, requester=None,
+                 url=None):
         self._auth = auth
-        self._credentials = credentials
+        self._credentials = credentials if credentials is not None else CredentialsCollection()
         self._requester = requester
 
         self._method = method or "GET"
@@ -58,7 +65,10 @@ class Sling:
         return self
 
     def path(self, path):
+        LOG.debug("Setting path (%r) with %r", self._url, path)
         self._url = urljoin(self._url, path)
+        LOG.debug("Resulting url: %r", self._url)
+
         return self
 
     def auth(self, supported):
@@ -101,20 +111,21 @@ class Sling:
             params={self._params!r},
         )>'''.format(self=self)).strip()
 
-    async def do_async(self):
-        sling = self
+    def _apply_auth(self):
         if self._auth is not None:
             sling = self.new()
+            sling._auth(self)
+            return sling
+        return self
 
-        return await self._requester.request(self)
+    async def do_async(self):
+        return await self._apply_auth()._requester.request(self)
 
     def do(self):
-        return self._requester.request(self)
+        return self._apply_auth()._requester.request(self)
 
 
-import aiohttp
-
-class AioHttpRequester():
+class AioHttpRequester:
     def __init__(self):
         self._session = aiohttp.ClientSession()
 
@@ -140,9 +151,8 @@ class AioHttpRequester():
     def __repr__(self):
         return '<{self.__class__.__name__} {id:X}>'.format(self=self, id=id(self))
 
-import requests
 
-class RequestsRequester():
+class RequestsRequester:
     def __init__(self):
         self._session = requests.Session()
 
@@ -157,8 +167,9 @@ class RequestsRequester():
     async def __aexit__(self, exc_type, exc, tb):
         self.close()
 
-    async def request(self, sling):
-        return await self._session.request(
+    def request(self, sling):
+        return self._session.request(
+            headers=sling._headers,
             method=sling._method,
             url=sling._url,
             params=sling._params if sling._method not in {'POST', 'PUT'} else None,

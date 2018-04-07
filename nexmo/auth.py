@@ -9,10 +9,10 @@ import jwt
 
 from .exceptions import AuthenticationError
 
-log = logging.getLogger('nexmo.auth')
+LOG = logging.getLogger('nexmo.auth')
 
 
-class SecretCredentials(object):
+class SecretCredentials:
     def __init__(self, api_key, api_secret):
         self.api_key = api_key
         self.api_secret = api_secret
@@ -22,7 +22,7 @@ class SecretCredentials(object):
         return "api_key and api_secret"
 
 
-class SignatureCredentials(object):
+class SignatureCredentials:
     def __init__(self, api_key, signature_secret):
         self.api_key = api_key
         self.signature_secret = signature_secret
@@ -32,7 +32,7 @@ class SignatureCredentials(object):
         return "api_key and signature_secret"
 
 
-class PrivateKeyCredentials(object):
+class PrivateKeyCredentials:
     def __init__(self, application_id, private_key):
         self.application_id = application_id
         self.private_key = private_key
@@ -42,7 +42,7 @@ class PrivateKeyCredentials(object):
         return "application_id and private_key"
 
 
-class CredentialsCollection(object):
+class CredentialsCollection:
     def __init__(self, credentials=None):
         if credentials is None:
             self._credentials = []
@@ -55,15 +55,20 @@ class CredentialsCollection(object):
         self._credentials.append(credentials)
 
     def _of_type(self, t):
+        # It would be easy to store a dict of { credentials-type -> credentials-instance }, but we need to
+        # also deal with subclasses, so:
         for creds in self:
             if isinstance(creds, t):
                 return creds
         return None
 
     def create_auth(self, auth_options):
+        LOG.debug("Configured credentials: %r", self._credentials)
         missing_creds = set()
         for auth in auth_options:
             creds = self._of_type(auth.credentials_type)
+            LOG.debug("Looking for creds of type %s", auth.credentials_type.__name__)
+            LOG.debug("Found: %r", creds)
             if creds:
                 return auth(creds)
             else:
@@ -78,7 +83,7 @@ class CredentialsCollection(object):
         return iter(self._credentials)
 
 
-class AuthProvider(object):
+class AuthProvider:
     credentials_type = None
 
     def __init__(self, credentials):
@@ -91,18 +96,18 @@ class AuthProvider(object):
 class SecretParamsAuth(AuthProvider):
     credentials_type = SecretCredentials
 
-    def __call__(self, request):
-        log.warning("Secret params authentication")
-        request.params.update(
+    def __call__(self, sling):
+        LOG.warning("Secret params authentication")
+        sling.params(dict(
             api_key=self.credentials.api_key,
-            api_secret=self.credentials.api_secret, )
+            api_secret=self.credentials.api_secret, ))
 
 
 class SecretBodyAuth(AuthProvider):
     credentials_type = SecretCredentials
 
     def __call__(self, sling):
-        log.warning("Secret body authentication")
+        LOG.warning("Secret body authentication")
         sling.params(dict(
             api_key=self.credentials.api_key,
             api_secret=self.credentials.api_secret, ))
@@ -130,7 +135,7 @@ class SignatureAuth(AuthProvider):
             sig=self._signature(sling._params), ))
 
     def __call__(self, request):
-        log.warning("Signature authentication")
+        LOG.warning("Signature authentication")
         self._modify_params(request.data)
 
 

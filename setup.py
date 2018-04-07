@@ -21,6 +21,7 @@ setup(
         'attrs          ~= 17.2.0',
         'marshmallow    ~= 3.0.0b7',
         'aiohttp        ~= 2.3.10',
+        'requests       ~= 2.18.4',
     ],
     classifiers=[
         'Programming Language :: Python',

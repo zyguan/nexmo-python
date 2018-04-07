@@ -2,7 +2,7 @@
 nexmo.sms - Nexmo SMS API interface.
 '''
 
-from .auth import requires_auth, SecretBodyAuth, SignatureAuth
+from .auth import SecretBodyAuth, SignatureAuth
 from .exceptions import AuthenticationError, ClientError, ServerError
 
 import attr
@@ -49,7 +49,7 @@ class MessagePart:
 
 class BaseSMSProvider:
     def __init__(self, sling):
-        self._sling = sling.new().path('sms')
+        self._sling = sling.new().path('sms/')
 
     def _send_text_sling(
             self,
@@ -118,9 +118,6 @@ class AsyncSMSProvider(BaseSMSProvider):
 
 
 class SMSProvider(BaseSMSProvider):
-    def __init__(self, sling):
-        self._sling = sling.new().path('sms')
-
     def send_text(
             self,
             *,

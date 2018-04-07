@@ -1,22 +1,21 @@
 import hashlib
 import hmac
-import jwt
+import logging
 import os
-import time
-import uuid
-import sys
-import warnings
 
 from platform import python_version
 from .auth import (CredentialsCollection, SecretCredentials,
                    SignatureCredentials, PrivateKeyCredentials)
-from .core import Sling
+from .core import Sling, RequestsRequester, AioHttpRequester
 from .exceptions import ClientError, ServerError, AuthenticationError
 from .sms import SMSProvider
 
 __version__ = '2.0.0'
 
 string_types = (str, bytes)
+
+
+LOG = logging.getLogger('nexmo')
 
 
 class Client(object):
@@ -43,15 +42,18 @@ class Client(object):
                 self.private_key = key_file.read()
 
         # Initialize auth collection:
-        auth_collection = CredentialsCollection()
+        creds = CredentialsCollection()
         if self.api_secret:
-            auth_collection.append(
+            LOG.debug("Creating SecretCredentials for: %s", self.api_key)
+            creds.append(
                 SecretCredentials(self.api_key, self.api_secret))
         if self.signature_secret:
-            auth_collection.append(
+            LOG.debug("Creating SignatureCredentials for: %s", self.api_key)
+            creds.append(
                 SignatureCredentials(self.api_key, self.signature_secret))
         if self.application_id:
-            auth_collection.append(
+            LOG.debug("Creating PrivateKeyCredentials for app: %s", self.application_id)
+            creds.append(
                 PrivateKeyCredentials(self.application_id, self.private_key))
 
         user_agent = 'nexmo-python/{0}/{1}'.format(__version__,
@@ -59,12 +61,7 @@ class Client(object):
         if app_name is not None and app_version is not None:
             user_agent += '/{0}/{1}'.format(app_name, app_version)
 
-        base_sling = Sling(
-            auth=auth_collection,
-            headers={
-                '': '',
-            },
-        )
+        base_sling = Sling(credentials=creds, requester=RequestsRequester())
 
         rest_sling = base_sling.new().base('https://rest.nexmo.com')
         api_sling =  base_sling.new().base('https://api.nexmo.com')
