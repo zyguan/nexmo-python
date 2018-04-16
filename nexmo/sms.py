@@ -1,12 +1,53 @@
-'''
+"""
 nexmo.sms - Nexmo SMS API interface.
-'''
+"""
 
 from .auth import SecretBodyAuth, SignatureAuth
 from .exceptions import AuthenticationError, ClientError, ServerError
 
 import attr
 from marshmallow import Schema, fields, post_load
+
+
+@attr.s
+class TextSMSMessage:
+    """ An SMS text or unicode message. """
+    from_: str = attr.ib()
+    to: str = attr.ib()
+    text: str = attr.ib()
+    unicode_: bool = attr.ib(default=False)
+    status_report_req: bool = attr.ib(default=False)
+    callback: str = attr.ib(default=None)
+    message_class: int = attr.ib(default=None)  # Left this as an int, not an enum. Range 0-3 
+    ttl: int = attr.ib(default=None)
+    client_ref = attr.ib(default=None)
+
+    @message_class.validator
+    def message_class_in_range(self, attribute, value):
+        if value is not None and not 0 <= value <= 3:
+            raise ValueError("message_class must be in the range 0-3 inclusive.")
+
+    def apply_to_sling(self, sling):
+        (sling
+            .post('json')
+            .auth([SignatureAuth, SecretBodyAuth])
+            .params({
+                'from': self.from_,
+                'to': self.to,
+                'text': self.text,
+                'type': 'text' if not self.unicode_ else 'unicode',
+            }))
+        if self.status_report_req or self.callback is not None:
+            sling.params({'status-report-req': 1})
+        if self.callback is not None:
+            sling.params({'callback': self.callback})
+        if self.message_class is not None:
+            sling.params({'message-class': self.message_class})
+        if self.ttl is not None:
+            sling.params({'ttl': self.ttl})
+        if self.client_ref is not None:
+            sling.params({'client-ref': self.client_ref})
+        return sling
 
 
 class MessagePartSchema(Schema):
@@ -47,110 +88,31 @@ class MessagePart:
     network = attr.ib()
 
 
-class BaseSMSProvider:
+class AsyncSMSProvider:
     def __init__(self, sling):
         self._sling = sling.new().path('sms/')
 
-    def _send_text_sling(
-            self,
-            *,
-            from_,
-            to,
-            text,
-            unicode_=False,
-            status_report_req=False,
-            callback=None,
-            message_class=None,
-    ):
-        sling = self._sling.new() \
-            .post('json') \
-            .auth([SignatureAuth, SecretBodyAuth]) \
-            .params({
-                'from': from_,
-                'to': to,
-                'text': text,
-                'type': 'text' if not unicode_ else 'unicode',
-            })
-        if status_report_req or callback is not None:
-            sling.params({'status-report-req': 1})
-        if callback is not None:
-            sling.params({'callback': callback})
-        if message_class is not None:
-            sling.params({'message-class': message_class})
-        return sling
-
-
-class AsyncSMSProvider(BaseSMSProvider):
-    async def send_text(
-            self,
-            *,
-            from_,
-            to,
-            text,
-            unicode_=False,
-            status_report_req=False,
-            callback=None,
-            message_class=None,
-    ):
+    async def send_sms(self, sms_message: TextSMSMessage):
         """
         Send an SMS text or unicode message.
-
-        :param str from_:
-        :param str to:
-        :param str text:
-        :param bool unicode_:
-        :param bool status_report_req:
-        :param str callback:
-        :param int message_class:
         :return:
         """
 
-        sling = self._send_text_sling(
-            from_=from_,
-            to=to,
-            text=text,
-            unicode_=unicode_,
-            status_report_req=status_report_req,
-            callback=callback,
-            message_class=message_class,
-        )
+        sling = sms_message.apply_to_sling(self._sling.new())
         return parse_response(await sling.do_async())
 
 
-class SMSProvider(BaseSMSProvider):
-    def send_text(
-            self,
-            *,
-            from_,
-            to,
-            text,
-            unicode_=False,
-            status_report_req=False,
-            callback=None,
-            message_class=None,
-    ):
+class SMSProvider:
+    def __init__(self, sling):
+        self._sling = sling.new().path('sms/')
+
+    def send_sms(self, sms_message: TextSMSMessage):
         """
         Send an SMS text or unicode message.
-
-        :param str from_:
-        :param str to:
-        :param str text:
-        :param bool unicode_:
-        :param bool status_report_req:
-        :param str callback:
-        :param int message_class:
         :return:
         """
 
-        sling = self._send_text_sling(
-            from_=from_,
-            to=to,
-            text=text,
-            unicode_=unicode_,
-            status_report_req=status_report_req,
-            callback=callback,
-            message_class=message_class,
-        )
+        sling = sms_message.apply_to_sling(self._sling.new())
         return parse_response(sling.do())
 
 
