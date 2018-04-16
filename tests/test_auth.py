@@ -4,6 +4,7 @@ from unittest import mock
 from nexmo.auth import *
 
 import requests
+from nexmo.core import Sling
 
 
 def test_empty_auth():
@@ -49,49 +50,47 @@ def test_SecretParamsAuth():
     request = mock.MagicMock(spec=["params"])
     SecretParamsAuth(
         SecretCredentials("dummy_api_key", "dummy_api_secret"))(request)
-    request.params.update.assert_called_once_with(
+    request.params.assert_called_once_with(dict(
         api_key="dummy_api_key",
-        api_secret="dummy_api_secret", )
+        api_secret="dummy_api_secret",
+    ))
 
 
 def test_SecretBodyAuth():
-    request = mock.MagicMock(spec=["data"])
+    request = mock.MagicMock(spec=["params"])
     SecretBodyAuth(
         SecretCredentials("dummy_api_key", "dummy_api_secret"))(request)
-    request.data.update.assert_called_once_with(
+    request.params.assert_called_once_with(dict(
         api_key="dummy_api_key",
-        api_secret="dummy_api_secret", )
+        api_secret="dummy_api_secret",
+    ))
 
 
 def test_JWTAuth():
-    request = mock.MagicMock(spec=["headers"])
+    request = Sling() # mock.MagicMock(spec=["headers"])
 
-    with mock.patch("time.time", return_value=1000),\
-        mock.patch("uuid.uuid4", return_value="872d8060-fdf5-4bd1-a583-1ce4463e5544"):
+    #  mock.patch("time.time", return_value=1000),\
+    with mock.patch("uuid.uuid4", return_value="872d8060-fdf5-4bd1-a583-1ce4463e5544"):
         auth = JWTAuth(
             PrivateKeyCredentials("dummy_application_id",
                                   conftest.read_file("data/private_key.txt")))(
                                       request)
-        request.headers.__setitem__.assert_called_with(
-            'Authorization',
-            b'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhcHBsaWNhdGlvbl9pZCI6ImR1bW15X2FwcGxpY2F0aW9uX2lkIiwiaWF0IjoxMDAwLCJleHAiOjEwNjAsImp0aSI6Ijg3MmQ4MDYwLWZkZjUtNGJkMS1hNTgzLTFjZTQ0NjNlNTU0NCJ9.SxUnnRKItAJktVktF_P2-dvckxswr955sHBbKqvwxTXkD4wAfUv5P5qPD1tI7iGk0udDlJ30CdvTA8vHG26TSoK_f_7qayPQWSOqKG060bJEBGdBkTjlh4ogLJTGbd25L1m1QHGq5x---17SjejoZm27D2noEzQD7uKaL74Y0keN-6C1DrqHnTnvvIKei3tsEQ7JXNWFuV28S06LN-r221j20dLbQ16drwM1MFD8ICGENEWud5enjBYxOtg6xPwosz7aRVC0ZIaclw6QNBxADuYe0Hy8ndj6889Pi5GmiejESnIpSY0BBVFKAMmf5IR12nXFI3UekgFvqFbU3dW4Aw'
-        )
+        import jwt
+        data = jwt.decode(request._headers['Authorization'][7:], conftest.read_file("data/public_key.txt"), algorithms=['RS256'])
+        assert data['application_id'] == 'dummy_application_id'
 
 
 def test_SignatureAuth():
-    request = requests.Request(
-        'POST',
-        "https://rest.nexmo.com/sms/json",
-        data={
-            "from": "447700900708",
-            "to": "447700900709",
-            "text": "Hello Nexmo!",
-        })
+    request = Sling().base('https://rest.nexmo.com/sms/json').params({
+        "from": "447700900708",
+        "to": "447700900709",
+        "text": "Hello Nexmo!",
+    }).post()
 
     with mock.patch.object(
             SignatureAuth, '_time', return_value=1507640281.326199):
         auth = SignatureAuth(credentials=SignatureCredentials(
             'dummy-api-key', 'not-a-secret'))
         auth(request)
-        assert request.data.get('api_key') == 'dummy-api-key'
-        assert request.data.get('sig') == '682cb6d85d6fe805302e195708871394'
+        assert request._params.get('api_key') == 'dummy-api-key'
+        assert request._params.get('sig') == '682cb6d85d6fe805302e195708871394'

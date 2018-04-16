@@ -1,7 +1,12 @@
+import os
 import os.path
 import platform
 
 import pytest
+
+
+# Clear the environment before running tests!
+os.environ = {}
 
 
 def read_file(path):

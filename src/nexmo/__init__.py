@@ -20,16 +20,15 @@ LOG = logging.getLogger('nexmo')
 
 class Client(object):
     def __init__(
-        self,
-        *,
-        key=None,
-        secret=None,
-        signature_secret=None,
-        application_id=None,
-        private_key=None,
-        app_name=None,
-        app_version=None,
-    ):
+            self,
+            *,
+            key=None,
+            secret=None,
+            signature_secret=None,
+            application_id=None,
+            private_key=None,
+            app_name=None,
+            app_version=None):
         self.api_key = key or os.environ.get('NEXMO_API_KEY', None)
         self.api_secret = secret or os.environ.get('NEXMO_API_SECRET', None)
         self.signature_secret = signature_secret or os.environ.get(
@@ -61,7 +60,9 @@ class Client(object):
         if app_name is not None and app_version is not None:
             user_agent += '/{0}/{1}'.format(app_name, app_version)
 
-        base_sling = Sling(credentials=creds, requester=RequestsRequester())
+        base_sling = Sling(credentials=creds, requester=RequestsRequester()).headers({
+            'User-Agent': user_agent,
+        })
 
         rest_sling = base_sling.new().base('https://rest.nexmo.com')
         api_sling =  base_sling.new().base('https://api.nexmo.com')

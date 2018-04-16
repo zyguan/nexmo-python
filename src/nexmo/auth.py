@@ -9,6 +9,7 @@ import jwt
 
 from .exceptions import AuthenticationError
 
+
 LOG = logging.getLogger('nexmo.auth')
 
 
@@ -134,9 +135,9 @@ class SignatureAuth(AuthProvider):
         sling.params(dict(
             sig=self._signature(sling._params), ))
 
-    def __call__(self, request):
+    def __call__(self, sling):
         LOG.warning("Signature authentication")
-        self._modify_params(request.data)
+        self._modify_params(sling)
 
 
 class JWTAuth(AuthProvider):
@@ -146,7 +147,7 @@ class JWTAuth(AuthProvider):
         iat = int(time.time())
 
         # TODO: Think about auth_params
-        payload = {}  # dict(self.auth_params)
+        payload = {}
         payload.setdefault('application_id', self.credentials.application_id)
         payload.setdefault('iat', iat)
         payload.setdefault('exp', iat + 60)
@@ -155,7 +156,7 @@ class JWTAuth(AuthProvider):
         token = jwt.encode(
             payload, self.credentials.private_key, algorithm='RS256')
 
-        sling.headers({'Authorization', b'Bearer ' + token})
+        sling.headers({'Authorization': b'Bearer ' + token})
 
 
 # FIXME: Probably not going to use this.

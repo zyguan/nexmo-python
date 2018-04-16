@@ -1,22 +1,22 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 
-
 [packages]
-
 "e1839a8" = {path = ".", editable = true}
 coverage = "*"
 pytest-cov = "*"
 requests = "*"
-
+marshmallow = "==3.0.0b7"
 
 [dev-packages]
-
-pytest = ">3.0.0"
+pytest = "==3.5.0"
 pytest-cov = "*"
 pylint = "*"
 pycodestyle = "*"
+responses = "*"
 tox = "*"
 vcrpy = "*"
+
+[pipenv]
+allow_prereleases = true

@@ -12,18 +12,18 @@ from marshmallow import Schema, fields, post_load
 @attr.s
 class TextSMSMessage:
     """ An SMS text or unicode message. """
-    from_: str = attr.ib()
-    to: str = attr.ib()
-    text: str = attr.ib()
-    unicode_: bool = attr.ib(default=False)
-    status_report_req: bool = attr.ib(default=False)
-    callback: str = attr.ib(default=None)
-    message_class: int = attr.ib(default=None)  # Left this as an int, not an enum. Range 0-3 
-    ttl: int = attr.ib(default=None)
-    client_ref = attr.ib(default=None)
+    from_ = attr.ib(type=str)
+    to = attr.ib(type=str)
+    text = attr.ib(type=str)
+    unicode_ = attr.ib(default=False, type=bool)
+    status_report_req = attr.ib(default=False, type=bool)
+    callback = attr.ib(default=None, type=str)
+    message_class = attr.ib(default=None, type=int)  # Left this as an int, not an enum. Range 0-3 
+    ttl = attr.ib(default=None, type=int)
+    client_ref = attr.ib(default=None, type=str)
 
     @message_class.validator
-    def message_class_in_range(self, attribute, value):
+    def message_class_in_range(self, _attribute, value):
         if value is not None and not 0 <= value <= 3:
             raise ValueError("message_class must be in the range 0-3 inclusive.")
 
@@ -60,12 +60,13 @@ class MessagePartSchema(Schema):
 
     @post_load
     def make_object(self, data):
+        print(data)
         return MessagePart(**data)
 
 
 class SendMessageResponseSchema(Schema):
-    message_count = fields.Str()
-    messages = MessagePartSchema(many=True)
+    message_count = fields.Int(load_from="message-count")
+    messages = fields.Nested(MessagePartSchema, many=True)
 
     @post_load
     def make_object(self, data):

@@ -1,11 +1,8 @@
-try:
-    from urllib.parse import urlparse, quote_plus
-except ImportError:
-    from urlparse import urlparse
-    from urllib import quote_plus
+from urllib.parse import urlparse, quote_plus
 
 import nexmo
-from util import *
+import util
+
 
 def test_check_signature(dummy_data):
     params = {
@@ -23,7 +20,7 @@ def test_check_signature(dummy_data):
     assert client.check_signature(params)
 
 
-def test_signature(client, dummy_data):
+def test_signature(dummy_data):
     params = {'a': '1', 'b': '2', 'timestamp': '1461605396'}
     client = nexmo.Client(
         key=dummy_data.api_key,
@@ -34,6 +31,7 @@ def test_signature(client, dummy_data):
 
 def test_client_doesnt_require_api_key():
     client = nexmo.Client(application_id='myid', private_key='abc\nde')
+    print(client, client.api_key)
     assert client is not None
     assert client.api_key is None
     assert client.api_secret is None
