@@ -10,12 +10,9 @@ import requests
 
 from .auth import CredentialsCollection
 
-__all__ = [
-    "IllegalStateError",
-    "Sling",
-]
+__all__ = ["IllegalStateError", "Sling"]
 
-LOG = logging.getLogger('nexmo.core')
+LOG = logging.getLogger("nexmo.core")
 
 
 class IllegalStateError(Exception):
@@ -23,24 +20,30 @@ class IllegalStateError(Exception):
 
 
 class Config:
-    def __init__(self,
-                 credentials,
-                 nexmo_version,
-                 app_name=None,
-                 app_version=None):
-        user_agent = 'nexmo-python/{0}/{1}'.format(nexmo_version,
-                                                   python_version())
-        if app_name is not None and 'app_version' is not None:
-            user_agent += '/{0}/{1}'.format(app_name, app_version)
+
+    def __init__(self, credentials, nexmo_version, app_name=None, app_version=None):
+        user_agent = "nexmo-python/{0}/{1}".format(nexmo_version, python_version())
+        if app_name is not None and "app_version" is not None:
+            user_agent += "/{0}/{1}".format(app_name, app_version)
 
         self.user_agent = user_agent
-        self.headers = {'User-Agent': user_agent}
+        self.headers = {"User-Agent": user_agent}
         self.credentials = credentials
 
 
 class Sling:
-    def __init__(self, *, auth=None, credentials=None, headers=None, method=None, params=None, requester=None,
-                 url=None):
+
+    def __init__(
+        self,
+        *,
+        auth=None,
+        credentials=None,
+        headers=None,
+        method=None,
+        params=None,
+        requester=None,
+        url=None
+    ):
         self._auth = auth
         self._credentials = credentials if credentials is not None else CredentialsCollection()
         self._requester = requester
@@ -58,7 +61,8 @@ class Sling:
             url=self._url,
             method=self._method,
             headers=dict(self._headers),
-            params=dict(self._params))
+            params=dict(self._params),
+        )
 
     def base(self, value):
         self._url = value
@@ -100,7 +104,8 @@ class Sling:
         return self.method("DELETE").path(path)
 
     def __repr__(self):
-        return dedent('''
+        return dedent(
+            """
         <{self.__class__.__name__}(
             auth={self._auth!r},
             credentials={self._credentials!r},
@@ -109,13 +114,17 @@ class Sling:
             method={self._method!r},
             headers={self._headers!r},
             params={self._params!r},
-        )>'''.format(self=self)).strip()
+        )>""".format(
+                self=self
+            )
+        ).strip()
 
     def _apply_auth(self):
         if self._auth is not None:
             sling = self.new()
             sling._auth(self)
             return sling
+
         return self
 
     async def do_async(self):
@@ -126,6 +135,7 @@ class Sling:
 
 
 class AioHttpRequester:
+
     def __init__(self):
         self._session = aiohttp.ClientSession()
 
@@ -144,15 +154,16 @@ class AioHttpRequester:
         return await self._session.request(
             method=sling._method,
             url=sling._url,
-            params=sling._params if sling._method not in {'POST', 'PUT'} else None,
-            data=sling._params if sling._method in {'POST', 'PUT'} else None,
+            params=sling._params if sling._method not in {"POST", "PUT"} else None,
+            data=sling._params if sling._method in {"POST", "PUT"} else None,
         )
 
     def __repr__(self):
-        return '<{self.__class__.__name__} {id:X}>'.format(self=self, id=id(self))
+        return "<{self.__class__.__name__} {id:X}>".format(self=self, id=id(self))
 
 
 class RequestsRequester:
+
     def __init__(self):
         self._session = requests.Session()
 
@@ -172,9 +183,9 @@ class RequestsRequester:
             headers=sling._headers,
             method=sling._method,
             url=sling._url,
-            params=sling._params if sling._method not in {'POST', 'PUT'} else None,
-            data=sling._params if sling._method in {'POST', 'PUT'} else None,
+            params=sling._params if sling._method not in {"POST", "PUT"} else None,
+            data=sling._params if sling._method in {"POST", "PUT"} else None,
         )
 
     def __repr__(self):
-        return '<{self.__class__.__name__} {id:X}>'.format(self=self, id=id(self))
+        return "<{self.__class__.__name__} {id:X}>".format(self=self, id=id(self))

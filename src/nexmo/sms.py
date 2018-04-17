@@ -18,7 +18,9 @@ class TextSMSMessage:
     unicode_ = attr.ib(default=False, type=bool)
     status_report_req = attr.ib(default=False, type=bool)
     callback = attr.ib(default=None, type=str)
-    message_class = attr.ib(default=None, type=int)  # Left this as an int, not an enum. Range 0-3 
+    message_class = attr.ib(
+        default=None, type=int
+    )  # Left this as an int, not an enum. Range 0-3
     ttl = attr.ib(default=None, type=int)
     client_ref = attr.ib(default=None, type=str)
 
@@ -28,25 +30,26 @@ class TextSMSMessage:
             raise ValueError("message_class must be in the range 0-3 inclusive.")
 
     def apply_to_sling(self, sling):
-        (sling
-            .post('json')
-            .auth([SignatureAuth, SecretBodyAuth])
-            .params({
-                'from': self.from_,
-                'to': self.to,
-                'text': self.text,
-                'type': 'text' if not self.unicode_ else 'unicode',
-            }))
+        (
+            sling.post("json").auth([SignatureAuth, SecretBodyAuth]).params(
+                {
+                    "from": self.from_,
+                    "to": self.to,
+                    "text": self.text,
+                    "type": "text" if not self.unicode_ else "unicode",
+                }
+            )
+        )
         if self.status_report_req or self.callback is not None:
-            sling.params({'status-report-req': 1})
+            sling.params({"status-report-req": 1})
         if self.callback is not None:
-            sling.params({'callback': self.callback})
+            sling.params({"callback": self.callback})
         if self.message_class is not None:
-            sling.params({'message-class': self.message_class})
+            sling.params({"message-class": self.message_class})
         if self.ttl is not None:
-            sling.params({'ttl': self.ttl})
+            sling.params({"ttl": self.ttl})
         if self.client_ref is not None:
-            sling.params({'client-ref': self.client_ref})
+            sling.params({"client-ref": self.client_ref})
         return sling
 
 
@@ -90,8 +93,9 @@ class MessagePart:
 
 
 class AsyncSMSProvider:
+
     def __init__(self, sling):
-        self._sling = sling.new().path('sms/')
+        self._sling = sling.new().path("sms/")
 
     async def send_sms(self, sms_message: TextSMSMessage):
         """
@@ -104,8 +108,9 @@ class AsyncSMSProvider:
 
 
 class SMSProvider:
+
     def __init__(self, sling):
-        self._sling = sling.new().path('sms/')
+        self._sling = sling.new().path("sms/")
 
     def send_sms(self, sms_message: TextSMSMessage):
         """
@@ -120,20 +125,23 @@ class SMSProvider:
 def parse_response(response, response_type=None):
     if response.status_code == 401:
         raise AuthenticationError()
+
     elif response.status_code == 204:
         return None
+
     elif 200 <= response.status_code < 300:
         json = response.json()
         if response_type is None:
             return json
+
         else:
             # TODO: Handle object mapping here:
             return json
+
     elif 400 <= response.status_code < 500:
-        message = "{code} response from server".format(
-            code=response.status_code)
+        message = "{code} response from server".format(code=response.status_code)
         raise ClientError(message)
+
     elif 500 <= response.status_code < 600:
-        message = "{code} response from server".format(
-            code=response.status_code)
+        message = "{code} response from server".format(code=response.status_code)
         raise ServerError(message)
