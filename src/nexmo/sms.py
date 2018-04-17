@@ -52,10 +52,10 @@ class TextSMSMessage:
 
 class MessagePartSchema(Schema):
     to = fields.Str()
-    message_id = fields.Str(load_from="message-id")
+    message_id = fields.Str(data_key="message-id")
     status = fields.Int()
-    remaining_balance = fields.Decimal(load_from="remaining-balance")
-    message_price = fields.Decimal(load_from="message-price")
+    remaining_balance = fields.Decimal(data_key="remaining-balance")
+    message_price = fields.Decimal(data_key="message-price")
     network = fields.Str()
 
     @post_load
@@ -65,7 +65,7 @@ class MessagePartSchema(Schema):
 
 
 class SendMessageResponseSchema(Schema):
-    message_count = fields.Int(load_from="message-count")
+    message_count = fields.Int(data_key="message-count")
     messages = fields.Nested(MessagePartSchema, many=True)
 
     @post_load

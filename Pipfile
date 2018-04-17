@@ -4,12 +4,9 @@ verify_ssl = true
 
 [packages]
 "e1839a8" = {path = ".", editable = true}
-coverage = "*"
-pytest-cov = "*"
-requests = "*"
-marshmallow = "==3.0.0b7"
 
 [dev-packages]
+coverage = ">=4.2"
 pytest = "==3.5.0"
 pytest-cov = "*"
 pylint = "*"
@@ -19,4 +16,4 @@ tox = "*"
 vcrpy = "*"
 
 [pipenv]
-allow_prereleases = true
+# allow_prereleases = true

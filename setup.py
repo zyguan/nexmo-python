@@ -18,10 +18,10 @@ setup(
     package_dir={"": "src"},
     platforms=['any'],
     install_requires=[
-        'PyJWT              == 1.5.3',
-        'cryptography       == 2.1.4',
+        'PyJWT              == 1.5.3',      # Pinning version to ensure compatibility with cryptography version
+        'cryptography       == 2.1.4',      # Pinning version to ensure binary packages are available
         'attrs              ~= 17.4.0',
-        'marshmallow        == 3.0.0b7',
+        'marshmallow        == 3.0.0b8',    # Pinning version until out of beta
         'aiohttp            ~= 2.3.10',
         'requests           ~= 2.18.4',
     ],
